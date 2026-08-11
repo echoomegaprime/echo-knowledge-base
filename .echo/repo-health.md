@@ -16,7 +16,7 @@ full `echo_list_namespaces` dump -- not the usual per-cap resolution flakiness t
 #29473) and `mcp__echo-cluster-ops__shell_run` still has its known unfixed HMAC/`fromhex` crash
 -- both FORGE-shell paths were down simultaneously. Fell back to the documented direct
 HAMMER-to-FORGE SSH bridge (`C:\Users\bobmc\forge_run.cmd`), transferring Python scripts via
-base64 to avoid quote-nesting through cmd.exe -> ssh -> bash. Filed #29617 to track the
+base64 to avoid quote-nesting through cmd.exe -> ssh -> bash. Filed #29615 to track the
 `echo.shell.run` regression. This receipt reproduces the identical showroom-floor audit the
 App would post, verified by direct `git ls-tree` on the exact commit plus a secret-literal
 scan of `src/`, `scripts/`, `tests/`.
