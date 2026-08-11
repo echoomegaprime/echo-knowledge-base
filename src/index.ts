@@ -24,6 +24,21 @@ app.use('*', async (c, next) => {
 
 app.use('*', cors());
 
+function timingSafeEqual(a: string | undefined | null, b: string | undefined | null): boolean {
+  if (!a || !b) return false;
+  const enc = new TextEncoder();
+  const bufA = enc.encode(a);
+  const bufB = enc.encode(b);
+  const len = Math.max(bufA.length, bufB.length, 1);
+  const padA = new Uint8Array(len);
+  const padB = new Uint8Array(len);
+  padA.set(bufA);
+  padB.set(bufB);
+  let diff = bufA.length ^ bufB.length;
+  for (let i = 0; i < len; i++) diff |= padA[i] ^ padB[i];
+  return diff === 0;
+}
+
 function uid(): string { return crypto.randomUUID(); }
 function sanitize(s: unknown, max = 10000): string {
   if (typeof s !== 'string') return '';
@@ -69,7 +84,7 @@ app.use('*', async (c, next) => {
   if (path.startsWith('/articles/') && path.endsWith('/feedback')) return next();
   if (path === '/webhooks/stripe' || path === '/plans') return next();
   const key = c.req.header('X-Echo-API-Key') || c.req.header('Authorization')?.replace('Bearer ', '');
-  if (!key || key !== c.env.ECHO_API_KEY) return json(c, { error: 'Unauthorized' }, 401);
+  if (!timingSafeEqual(key, c.env.ECHO_API_KEY)) return json(c, { error: 'Unauthorized' }, 401);
   return next();
 });
 
@@ -136,13 +151,20 @@ app.get('/articles', async (c) => {
   const r = await c.env.DB.prepare(q).bind(...params).all();
   return json(c, { articles: r.results });
 });
+// Same safe field list the /articles list endpoint already uses, plus the
+// full article body (content/meta) that a detail view legitimately needs --
+// deliberately excludes author_email, an internal contact address with no
+// reason to be public. This route has no auth of its own (every GET is
+// public, including this one), so any field selected here is world-readable.
+const ARTICLE_DETAIL_FIELDS = 'id,tenant_id,category_id,title,slug,content,excerpt,status,visibility,author_name,tags,meta_title,meta_description,view_count,helpful_yes,helpful_no,current_version,featured,order_num,created_at,updated_at,published_at';
+
 app.get('/articles/:id', async (c) => {
   const id = c.req.param('id');
   // Try by ID first, then by slug
-  let r = await c.env.DB.prepare('SELECT * FROM articles WHERE id=?').bind(id).first();
+  let r = await c.env.DB.prepare(`SELECT ${ARTICLE_DETAIL_FIELDS} FROM articles WHERE id=?`).bind(id).first();
   if (!r) {
     const t = tid(c);
-    if (t) r = await c.env.DB.prepare('SELECT * FROM articles WHERE tenant_id=? AND slug=?').bind(t, id).first();
+    if (t) r = await c.env.DB.prepare(`SELECT ${ARTICLE_DETAIL_FIELDS} FROM articles WHERE tenant_id=? AND slug=?`).bind(t, id).first();
   }
   if (!r) return json(c, { error: 'Not found' }, 404);
   // Increment view count
