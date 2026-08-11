@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "echo-knowledge-base",
+  "capabilities": [],
+  "note": "No SDK namespace collision. echo_search_caps queried for 'knowledge base wiki documentation articles' and 'echo.knowledgebase' -- zero matches both times (2026-08-11). A broader 'echo.knowledge' search found 4 caps (get/ingest/search/stats) but these belong to the fleet's docs-first Knowledge Forge -- the doctrine/grounding RAG system CLAUDE.md itself references for evicted deep-dive sections -- an architecturally distinct system from this repo (a customer-facing help-center/wiki product with tenants, categories, published articles, and Stripe billing). Confirmed via systemctl on FORGE too: the live 'echo-knowledge-*' services (forge/scout/tools/fetcher) are all part of that grounding system, not this one. No overlap, nothing to reconcile.",
+  "entrypoints": ["scripts/certforge_journey.py"],
+  "data_classification": "restricted",
+  "network": "none"
+}
